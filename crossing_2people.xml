@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--This scenario file was created by SGDiCoP on 2014-04-16T15:14:48-->
+<scenario>
+    <!--Interior rectangle-->
+    <!--obstacle x1="8" y1="3" x2="12" y2="4"/-->
+
+    <!-- Agent 1 -->
+    <agent id="1">
+        <spawnpoint id="spawn" x ="60" y="-5"/>
+        <waypoint id="goal_1" x="80" y="-5"/>
+        <waypoint id="goal_2" x="80" y="5"/>
+        <waypoint id="goal_3" x="65" y="5"/>
+        <waypoint id="goal_4" x="80" y="5"/>
+        <waypoint id="goal_5" x="80" y="-5"/>
+        <waypoint id="goal_6" x="65" y="-5"/>
+    </agent>
+    <!--
+    <agent id="2">
+        <spawnpoint id="spawn" x ="160" y="-5"/>
+        <waypoint id="goal_1" x="180" y="-5"/>
+        <waypoint id="goal_2" x="180" y="5"/>
+        <waypoint id="goal_3" x="165" y="5"/>
+        <waypoint id="goal_4" x="180" y="5"/>
+        <waypoint id="goal_5" x="180" y="-5"/>
+        <waypoint id="goal_6" x="165" y="-5"/>
+    </agent>
+    -->
+</scenario>

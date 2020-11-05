@@ -10,6 +10,8 @@ import numpy as np
 import random
 import time
 import math
+import xml.etree.ElementTree as ET
+import carla
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -19,9 +21,23 @@ try:
 except IndexError:
     pass
 
-import carla
-
 print('Initialization ...')
+
+tree = ET.parse('crossing_2people.xml')
+root = tree.getroot()
+
+Spawnpoint = np.zeros((len(root),2))
+Waypoint = np.zeros((len(root),6,2))
+
+for idx, agent in enumerate(root):
+    number = agent.get('id')
+    for idx2, waypoint in enumerate(agent):
+        if waypoint.tag == "spawnpoint":
+            Spawnpoint[idx][0] = waypoint.attrib.get('x')
+            Spawnpoint[idx][1] = waypoint.attrib.get('y')
+        else:
+            Waypoint[idx][idx2-1][0] = waypoint.attrib.get('x')
+            Waypoint[idx][idx2-1][1] = waypoint.attrib.get('y')
 
 class SpawnWalker:
     def __init__(self):
@@ -40,7 +56,7 @@ class SpawnWalker:
         self.argparser.add_argument(
             '-w', '--number-of-walkers',
             metavar='W',
-            default=1,
+            default=number, # Read from xml file
             type=int,
             help='number of walkers (default: 50)')
         self.argparser.add_argument(
@@ -103,10 +119,7 @@ class SpawnWalker:
         percentagePedestriansRunning = 0.0
 
         for i in range(self.args.number_of_walkers):
-            spawn_point = carla.Transform()
-            spawn_point.location.x = SpawnLocation[0]
-            spawn_point.location.y = SpawnLocation[1]
-            spawn_point.location.z = SpawnLocation[2]
+            spawn_point = carla.Transform(carla.Location(x=SpawnLocation[0], y=SpawnLocation[1]))
 
             if (spawn_point.location != None):
                 spawn_points.append(spawn_point)
@@ -115,7 +128,6 @@ class SpawnWalker:
         self.batch = []
         walker_speed = []
         for spawn_point in spawn_points:
-            print(spawn_point)
             self.walker_bp = random.choice(self.blueprintsWalkers)
             # set as not invincible
             if self.walker_bp.has_attribute('is_invincible'):
@@ -174,31 +186,28 @@ class SpawnWalker:
 
         return self.walkers_list, self.all_id, self.all_actors, self.walker_speed 
                 
-    def PedestrianTarget(self, TargetLocation, walkers_list, all_id, all_actors, walker_speed, i): 
-        self.walkers_list = walkers_list
+    def PedestrianTarget(self, TargetLocation, all_actors, walker_speed, i): 
         self.all_actors = all_actors
-        self.all_id = all_id
         self.walker_speed = walker_speed
-        
-        # start walker
-        self.all_actors[i].start()
 
-        # set walk to random point
-        Target = self.world.get_random_location_from_navigation()
-        Target.x = TargetLocation[0]
-        Target.y = TargetLocation[1]
-        Target.z = TargetLocation[2]
-        self.all_actors[i].go_to_location(Target)
+        # Get the current position
+        current_position = np.array([all_actors[i+1].get_location().x, all_actors[i+1].get_location().y])
         
-        # max speed
+        # Compute the distance from the current position to the next waypoint
+        dist = np.linalg.norm(TargetLocation - current_position)
+
+        # Set the destination
+        self.all_actors[i].go_to_location(carla.Location(x = TargetLocation[0], y = TargetLocation[1]))
+        
+        # Set the speed of the walker
         self.all_actors[i].set_max_speed(float(self.walker_speed[int(i/2)]))    
 
-        #if not self.args.sync or not self.synchronous_master:
-            #self.world.wait_for_tick()
-        #else:
-            #self.world.tick() 
+        if not self.args.sync or not self.synchronous_master:
+            self.world.wait_for_tick()
+        else:
+            self.world.tick() 
         
-        return self.walkers_list, self.all_id, self.all_actors
+        return self.all_actors, dist
 
     def DestroyActors(self, walkers_list, all_id, all_actors):
         # Stop walker controllers
@@ -216,51 +225,41 @@ class SpawnWalker:
 
 def main():
     try:
-        SpawnLocation = np.array([65, -5, 0])
-
-        TargetLocation = np.array([[80, -5, 0], [80, 5, 0], [65, 5, 0], [80, 5, 0], [80, -5, 0], [65, -5, 0]])
+        
+        # Read from xml file
+        SpawnLocation = Spawnpoint[0]
+        TargetLocation = Waypoint[0]
 
         print(TargetLocation.shape)
-        # run codes only once
+        # Run codes only once
         walkers_list, all_id = SpawnWalker().Apply_Settings()
         walkers_list, all_id, all_actors, walker_speed = SpawnWalker().SpawnPedestrians(walkers_list, all_id, SpawnLocation)
 
         # run codes every second
-        start_time  = time.time()
-        end_time = time.time()
-        elapsed_time = end_time- start_time
+        # start_time  = time.time()
+        # end_time = time.time()
+        # elapsed_time = end_time- start_time
 
-        # rows are steps, columns are pedestrians
-        ReachTarget = np.zeros((TargetLocation.shape[0], 2), dtype = int)
-
+        # Start the actors
         for i in range(0, len(all_id), 2):
             all_actors[i].start()
         
+        # Start the AIcontroller
         while True:
             for i in range(0, len(all_id), 2):
-                print(i)
                 for j in range(TargetLocation.shape[0]):
-                    print(j)
+                    # Print out the next waypoint
                     print(TargetLocation[j])
-                    current_position = np.array([all_actors[i+1].get_location().x, all_actors[i+1].get_location().y, all_actors[i+1].get_location().z])
-                    dist = np.linalg.norm(TargetLocation[j] - current_position)
-                    #SpawnWalker().PedestrianTarget(TargetLocation[j], walkers_list, all_id, all_actors, walker_speed, i)
-                    #Target = world.get_random_location_from_navigation()
-                    #Target.x = TargetLocation[j][0]
-                    #Target.y = TargetLocation[j][1]
-                    #Target.z = TargetLocation[j][2]
-                    all_actors[i].go_to_location(carla.Location(x = TargetLocation[j][0], y = TargetLocation[j][1], z = TargetLocation[j][2]))
-                    all_actors[i].set_max_speed(3)
-                    while dist > 5:
-                        current_position = np.array([all_actors[i + 1].get_location().x, all_actors[i + 1].get_location().y, all_actors[i + 1].get_location().z])
+                    all_actors, dist = SpawnWalker().PedestrianTarget(TargetLocation[j], all_actors, walker_speed, i)
+                    # Condition
+                    while dist > 3:
+                        current_position = np.array([all_actors[i + 1].get_location().x, all_actors[i + 1].get_location().y])
                         dist = np.linalg.norm(TargetLocation[j] - current_position)
                         print(dist)
                         time.sleep(.5)
                         if dist > 20:
-                            all_actors[i+1].set_location(carla.Location(x = SpawnLocation[0], y = SpawnLocation[1], z = SpawnLocation[2]))
+                            all_actors[i+1].set_location(carla.Location(x = SpawnLocation[0], y = SpawnLocation[1]))
 
-            
-                
     finally:
         SpawnWalker().DestroyActors(walkers_list, all_id, all_actors)
 
