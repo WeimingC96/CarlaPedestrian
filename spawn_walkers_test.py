@@ -28,12 +28,12 @@ print('Initialization ...')
 tree = ET.parse('crossing_2people.xml')
 root = tree.getroot()
 
-Spawnpoint = np.zeros((len(root)-2,2))
-Waypoint = np.zeros((len(root)-2,6,2))
-Speed = np.zeros((len(root)-2,1))
+Spawnpoint = np.zeros((len(root)-1, 2))
+Waypoint = np.zeros((len(root)-1, 6, 2))
+Speed = np.zeros((len(root)-1, 1))
+Threshold = np.zeros((len(root)-1, 1))
 
 Rate = float(root.find('Distance_check_rate').text)
-Threshold = int(root.find('Distance_threshold').text)
 number = len(root.findall('agent'))
 
 for idx, agent in enumerate(root):
@@ -44,10 +44,13 @@ for idx, agent in enumerate(root):
         
         elif par.tag == "speed":
             Speed[idx] = par.text
+
+        elif par.tag == "threshold":
+            Threshold[idx] = par.text
         
         elif par.tag == "waypoint":
-            Waypoint[idx][idx2-2][0] = par.attrib.get('x')
-            Waypoint[idx][idx2-2][1] = par.attrib.get('y')
+            Waypoint[idx][idx2-3][0] = par.attrib.get('x')
+            Waypoint[idx][idx2-3][1] = par.attrib.get('y')
         
         else:
             pass
@@ -144,7 +147,7 @@ class SpawnWalker:
             self.walker_bp = random.choice(self.blueprintsWalkers)
             # set as not invincible
             if self.walker_bp.has_attribute('is_invincible'):
-                self.walker_bp.set_attribute('is_invincible', 'false')
+                self.walker_bp.set_attribute('is_invincible', 'true')
             # set the max speed
             if self.walker_bp.has_attribute('speed'):
                 if (random.random() > percentagePedestriansRunning):
@@ -235,7 +238,7 @@ class SpawnWalker:
                 self.all_actors, dist, self.walker_speed = self.PedestrianTarget(TargetLocation[j], all_actors, walker_speed, 0, Speed[0])
                 
                 # Condition
-                while dist > Threshold:
+                while dist > Threshold[0]:
                     current_position = np.array([all_actors[1].get_location().x, all_actors[1].get_location().y])
                     dist = np.linalg.norm(TargetLocation[j] - current_position)
                     print(dist)
@@ -259,7 +262,7 @@ class SpawnWalker:
         self.all_actors, dist2, self.walker_speed = self.PedestrianTarget(TargetLocation2[j], all_actors, walker_speed, 2, Speed[1])
     
         while True:
-            if dist1 > Threshold:
+            if dist1 > Threshold[0]:
                 print("First pedestrian:", dist1)
                 current_position1 = np.array([all_actors[1].get_location().x, all_actors[1].get_location().y])
                 dist1 = np.linalg.norm(TargetLocation1[i] - current_position1)
@@ -270,7 +273,7 @@ class SpawnWalker:
                     i = 0
                 self.all_actors, dist1, self.walker_speed = self.PedestrianTarget(TargetLocation1[i], all_actors, walker_speed, 0, Speed[0])
                 
-            if dist2 > Threshold:
+            if dist2 > Threshold[1]:
                 print("Second pedestrian:", dist2)
                 current_position2 = np.array([all_actors[3].get_location().x, all_actors[3].get_location().y])
                 dist2 = np.linalg.norm(TargetLocation2[j] - current_position2)
@@ -280,6 +283,38 @@ class SpawnWalker:
                 if j == TargetLocation2.shape[0]:
                     j = 0
                 self.all_actors, dist2, self.walker_speed = self.PedestrianTarget(TargetLocation2[j], all_actors, walker_speed, 2, Speed[1])
+        
+        return self.all_actors, self.walker_speed
+    
+    def StartNWalker(self, all_id, Waypoint, all_actors, walker_speed, Speed, Rate, Threshold, number):
+        # Start all the pedestrians
+        dist = np.zeros((number, 1))
+        location_idx = np.zeros((number))
+        actor_idx = 0
+        for i in range(number):
+            TargetLocation = Waypoint[i]
+            self.all_actors, dist[i], self.walker_speed = self.PedestrianTarget(TargetLocation[int(location_idx[i])], all_actors, walker_speed, actor_idx, Speed[i])
+            actor_idx = actor_idx + 2
+        print(dist)
+
+        # Distance check for all the pedestrians
+        while True:
+            actor_idx = 0
+            for i in range(number):
+                if dist[i] > Threshold[i]:
+                    TargetLocation = Waypoint[i]
+                    print("Pedestrian %d next waypoint:(%d, %d)" %((i+1), TargetLocation[int(location_idx[i])][0], TargetLocation[int(location_idx[i])][1]))
+                    print("Pedestrian %d distance to next waypoint is %f" %((i+1), dist[i]))
+                    current_position = np.array([all_actors[actor_idx].get_location().x, all_actors[actor_idx].get_location().y])
+                    dist[i] = np.linalg.norm(TargetLocation[int(location_idx[i])] - current_position)
+                else:
+                    location_idx[i] = location_idx[i] + 1
+                    TargetLocation = Waypoint[i]
+                    if location_idx[i] == TargetLocation.shape[0]:
+                        location_idx[i] = 0
+                    self.all_actors, dist[i], self.walker_speed = self.PedestrianTarget(TargetLocation[int(location_idx[i])], all_actors, walker_speed, actor_idx, Speed[i])
+                actor_idx = actor_idx + 2
+            time.sleep(1/Rate)
         
         return self.all_actors, self.walker_speed
     
@@ -308,19 +343,16 @@ def main():
         for i in range(0, len(all_id), 2):
             all_actors[i].start()
         
-        if number == 1:
+        # Start the AIcontroller
+        if number == 5:
             SpawnWalker().StartOneWalker(all_id, Waypoint, all_actors, walker_speed, Speed, Rate, Threshold)
         
-        elif number == 2:
+        elif number == 6:
             SpawnWalker().StartTwoWalker(all_id, Waypoint, all_actors, walker_speed, Speed, Rate, Threshold)
-        # Start the AIcontroller
-        #print(number)
-        #options = {
-        #    1: SpawnWalker().StartOneWalker(all_id, Waypoint, all_actors, walker_speed, Speed, Rate, Threshold), 
-        #    2: SpawnWalker().StartTwoWalker(all_id, Waypoint, all_actors, walker_speed)
-        #    }
-        #options[number]()
-    
+        
+        else:
+            SpawnWalker().StartNWalker(all_id, Waypoint, all_actors, walker_speed, Speed, Rate, Threshold, number)
+        
     finally:
         SpawnWalker().DestroyActors(walkers_list, all_id, all_actors)
         #pass
