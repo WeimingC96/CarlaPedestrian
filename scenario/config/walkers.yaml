@@ -1,0 +1,26 @@
+agent:
+  agent_1:
+    speed: 1.8
+    threshold: 1
+    spawnpoint: [15, -5]
+    waypoint: [[25, -5],[25, 5],[15, 5],[25, 5],[25, -5],[15, -5]]
+
+  # agent_2:
+  #   speed: 1.8
+  #   threshold: 1
+  #   spawnpoint: [20, 6]
+  #   waypoint: [[30, 6],[30, -6],[20, -6],[30, -6],[30, 6],[20, 6]]
+
+  # agent_3:
+  #   speed: 1.8
+  #   threshold: 1
+  #   spawnpoint: [30, -6]
+  #   waypoint: [[20, -6],[20, 6],[15, 6],[20, 6],[20, -6],[15, -6]]
+
+  # agent_4:
+  #   speed: 1.4
+  #   threshold: 1
+  #   spawnpoint: [25, 5]
+  #   waypoint: [[40, 6],[40, -6],[25, -6],[40, -6],[40, 6],[25, 6]]
+
+Distance_check_rate: 5

@@ -1,0 +1,7 @@
+<!-- -->
+<launch>
+  <rosparam file="$(find scenario)/config/walkers.yaml" command="load" />
+
+  <node pkg="scenario" type="carla_pedestrian_node.py" name="carla_pedestrian_node" output="screen">
+  </node>
+</launch>
