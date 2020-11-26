@@ -1,6 +1,6 @@
 agent:
   agent_1:
-    speed: 1.8
+    speed: 1.4
     threshold: 1
     spawnpoint: [15, -5]
     waypoint: [[25, -5],[25, 5],[15, 5],[25, 5],[25, -5],[15, -5]]
@@ -8,8 +8,8 @@ agent:
   # agent_2:
   #   speed: 1.8
   #   threshold: 1
-  #   spawnpoint: [20, 6]
-  #   waypoint: [[30, 6],[30, -6],[20, -6],[30, -6],[30, 6],[20, 6]]
+  #   spawnpoint: [35, 6]
+  #   waypoint: [[30, 6],[30, -6],[20, -6],[30, -6],[30, 6],[35, 6]]
 
   # agent_3:
   #   speed: 1.8
